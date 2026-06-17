@@ -69,10 +69,35 @@ def search_listings(
 
     Before writing code, fill in the Tool 1 section of planning.md.
     """
-    # Replace this with your implementation
-    return []
+    listings = load_listings()
 
+    keywords = description.lower().split()
+    matches = []
 
+    for listing in listings:
+
+        if max_price is not None and listing["price"] > max_price:
+            continue
+
+        if size is not None and size.strip():
+            if size.lower() not in listing["size"].lower():
+                continue
+
+        text = (
+            listing["title"] + " "
+            + listing["description"] + " "
+            + " ".join(listing["style_tags"])
+        ).lower()
+
+        score = sum(1 for word in keywords if word in text)
+
+        if score > 0:
+            matches.append((score, listing))
+
+    matches.sort(key=lambda x: x[0], reverse=True)
+
+    return [listing for score, listing in matches]
+    
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
 
 def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
@@ -100,8 +125,23 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 
     Before writing code, fill in the Tool 2 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+    if not wardrobe.get("items"):
+        return f"""
+        The {new_item['title']} would pair well with jeans, neutral sneakers,
+        and a simple jacket. It works best for a casual everyday streetwear look.
+        """
+
+    wardrobe_items = wardrobe["items"][:3]
+
+    outfit = f"Style the {new_item['title']} with "
+
+    for item in wardrobe_items:
+        outfit += item["name"] + ", "
+
+    outfit += "for a coordinated outfit."
+
+    return outfit
+    
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -109,29 +149,47 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 def create_fit_card(outfit: str, new_item: dict) -> str:
     """
     Generate a short, shareable outfit caption for the thrifted find.
-
-    Args:
-        outfit:   The outfit suggestion string from suggest_outfit().
-        new_item: The listing dict for the thrifted item.
-
-    Returns:
-        A 2–4 sentence string usable as an Instagram/TikTok caption.
-        If outfit is empty or missing, return a descriptive error message
-        string — do NOT raise an exception.
-
-    The caption should:
-    - Feel casual and authentic (like a real OOTD post, not a product description)
-    - Mention the item name, price, and platform naturally (once each)
-    - Capture the outfit vibe in specific terms
-    - Sound different each time for different inputs (use higher LLM temperature)
-
-    TODO:
-        1. Guard against an empty or whitespace-only outfit string.
-        2. Build a prompt that gives the LLM the item details and the outfit,
-           and asks for a caption matching the style guidelines above.
-        3. Call the LLM and return the response.
-
-    Before writing code, fill in the Tool 3 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+
+    if not outfit.strip():
+        return "Unable to create fit card because outfit information is missing."
+
+    fit_card = f"""
+FIT CARD
+
+Item: {new_item['title']}
+Price: ${new_item['price']}
+Platform: {new_item['platform']}
+
+Outfit:
+{outfit}
+
+Style Notes:
+This outfit creates a clean and coordinated look while keeping the thrifted item as the main focus.
+"""
+
+    return fit_card
+
+
+from utils.data_loader import get_example_wardrobe
+
+if __name__ == "__main__":
+
+    results = search_listings(
+        description="vintage graphic tee",
+        max_price=30
+    )
+
+    wardrobe = get_example_wardrobe()
+
+    outfit = suggest_outfit(
+        results[0],
+        wardrobe
+    )
+
+    fit_card = create_fit_card(
+    outfit,
+    results[0]
+    )
+
+    print(fit_card)
