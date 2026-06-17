@@ -41,62 +41,56 @@ def search_listings(
     size: str | None = None,
     max_price: float | None = None,
 ) -> list[dict]:
-    """
-    Search the mock listings dataset for items matching the description,
-    optional size, and optional price ceiling.
 
-    Args:
-        description: Keywords describing what the user is looking for
-                     (e.g., "vintage graphic tee").
-        size:        Size string to filter by, or None to skip size filtering.
-                     Matching is case-insensitive (e.g., "M" matches "S/M").
-        max_price:   Maximum price (inclusive), or None to skip price filtering.
-
-    Returns:
-        A list of matching listing dicts, sorted by relevance (best match first).
-        Returns an empty list if nothing matches — does NOT raise an exception.
-
-    Each listing dict has the following fields:
-        id, title, description, category, style_tags (list), size,
-        condition, price (float), colors (list), brand, platform
-
-    TODO:
-        1. Load all listings with load_listings().
-        2. Filter by max_price and size (if provided).
-        3. Score each remaining listing by keyword overlap with `description`.
-        4. Drop any listings with a score of 0 (no relevant matches).
-        5. Sort by score, highest first, and return the listing dicts.
-
-    Before writing code, fill in the Tool 1 section of planning.md.
-    """
     listings = load_listings()
 
-    keywords = description.lower().split()
+    NOISE_WORDS = {"size", "8", "7", "9", "10", "the", "a", "an"}
+
+    query_words = [
+        w for w in description.lower().split()
+    if w not in NOISE_WORDS
+]
     matches = []
 
-    for listing in listings:
+    for item in listings:
 
-        if max_price is not None and listing["price"] > max_price:
+        # ── PRICE FILTER ─────────────────────────────
+        if max_price is not None and item["price"] > max_price:
             continue
 
+        # ── SIZE FILTER ──────────────────────────────
         if size is not None and size.strip():
-            if size.lower() not in listing["size"].lower():
+            if size.lower() not in item["size"].lower():
                 continue
 
+        # ── BUILD SEARCH TEXT ────────────────────────
         text = (
-            listing["title"] + " "
-            + listing["description"] + " "
-            + " ".join(listing["style_tags"])
+            item["title"] + " " +
+            item["description"] + " " +
+            " ".join(item["style_tags"])
         ).lower()
 
-        score = sum(1 for word in keywords if word in text)
+        # ── SCORING SYSTEM (KEY FIX) ─────────────────
+        score = 0
 
-        if score > 0:
-            matches.append((score, listing))
+        for word in query_words:
+            if word in text:
+                score += 2   # stronger weight
 
+        # boost exact title match
+        if any(word in item["title"].lower() for word in query_words):
+            score += 3
+
+        # discard weak matches
+        if score == 0:
+            continue
+
+        matches.append((score, item))
+
+    # ── SORT BY BEST MATCH ─────────────────────────
     matches.sort(key=lambda x: x[0], reverse=True)
 
-    return [listing for score, listing in matches]
+    return [item for score, item in matches]
     
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
 
@@ -175,21 +169,19 @@ from utils.data_loader import get_example_wardrobe
 
 if __name__ == "__main__":
 
-    results = search_listings(
-        description="vintage graphic tee",
-        max_price=30
-    )
+    tests = [
+        "white sneakers size 8",
+        "vintage graphic tee",
+        "grunge jacket",
+        "black hoodie"
+    ]
 
-    wardrobe = get_example_wardrobe()
+    for q in tests:
+        print("\n====================")
+        print("QUERY:", q)
+        print("====================")
 
-    outfit = suggest_outfit(
-        results[0],
-        wardrobe
-    )
+        results = search_listings(q, size=None, max_price=100)
 
-    fit_card = create_fit_card(
-    outfit,
-    results[0]
-    )
-
-    print(fit_card)
+        for r in results[:3]:
+            print(r["title"], "-", r["price"])
