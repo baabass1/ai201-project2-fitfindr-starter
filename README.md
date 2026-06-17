@@ -64,60 +64,104 @@ wardrobe = get_example_wardrobe()
 
 ## Tool Inventory
 
-Your README submission must document each tool's name, inputs, and return value. **These must exactly match your actual function signatures in `tools.py`.** Your documented interfaces will be checked against your actual function signatures in `tools.py` — if the parameter count or types contradict what's in the code, you may not receive full credit for that tool.
+### 1. search_listings
+
+- **Inputs:**
+  - description (str)
+  - size (str or None)
+  - max_price (float)
+
+- **Returns:**
+  - List of matching clothing items (dicts)
+  - Each item includes: id, title, description, size, price, condition, platform
+
+
+### 2. suggest_outfit
+
+- **Inputs:**
+  - selected_item (dict)
+  - wardrobe (dict)
+
+- **Returns:**
+  - A string describing outfit combinations using wardrobe items + selected item
+
+
+### 3. create_fit_card
+
+- **Inputs:**
+  - outfit_suggestion (str)
+  - selected_item (dict)
+
+- **Returns:**
+  - Formatted string "fit card" summarizing item + outfit + style notes
 
 ---
 
 ## Interaction Walkthrough
 
-<!-- Walk through a complete interaction step by step: natural language query → each tool call (and why) → final fit card.
-     Walk through this carefully — it's how graders follow your agent's reasoning without a live demo.
-     Use a specific example — do not leave this as a template. -->
-
 **User query:**
+"vintage graphic tee under $30, size M"
+
 
 **Step 1 — Tool called:**
-- Tool:
+- Tool: search_listings
 - Input:
+  description = "vintage graphic tee under $30"
+  size = "M"
+  max_price = 30
 - Why this tool:
+  To find matching clothing items from the dataset
 - Output:
+  List of matching vintage graphic tees, ranked by relevance
+
 
 **Step 2 — Tool called:**
-- Tool:
+- Tool: suggest_outfit
 - Input:
+  selected_item = top search result
+  wardrobe = user wardrobe
 - Why this tool:
+  To generate styling suggestions using existing wardrobe items
 - Output:
+  Outfit description combining tee with jeans/tops/etc.
+
 
 **Step 3 — Tool called:**
-- Tool:
+- Tool: create_fit_card
 - Input:
+  outfit_suggestion + selected_item
 - Why this tool:
+  To format final output into a clean user-facing card
 - Output:
+  Final structured fit card
+
 
 **Final output to user:**
+A formatted listing + outfit suggestion + fit card
 
 ---
 
 ## Error Handling and Fail Points
 
-<!-- For each tool, describe the specific failure mode and what your agent does in response.
-     This maps to the error handling section of the rubric (F5-C1). -->
-
 | Tool | Failure mode | Agent response |
 |------|-------------|----------------|
-| `search_listings` | | |
-| `suggest_outfit` | | |
-| `create_fit_card` | | |
+| search_listings | No matching items found | Set `session["error"] = "No matching items found."` and stop pipeline |
+| suggest_outfit | Wardrobe is empty | Return general styling advice instead of outfit combinations |
+| create_fit_card | Missing or empty outfit string | Return fallback message: "Unable to create fit card due to missing data." |
 
 ---
 
 ## Spec Reflection
 
-<!-- Answer both questions with at least 2–3 sentences each. -->
-
 **One way planning.md helped during implementation:**
 
+It helped structure the overall flow of the agent by clearly defining how the query should move through search, outfit generation, and final formatting. This made it easier to implement the tool chain step-by-step without mixing responsibilities.
+
+---
+
 **One divergence from your spec, and why:**
+
+I simplified the parsing step in agent.py by directly using the raw query instead of building a complex NLP parser. This was done to prioritize correctness and ensure reliable matching with the mock dataset.
 
 ---
 
